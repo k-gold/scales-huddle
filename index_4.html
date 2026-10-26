@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F4">
+<title>Scales &amp; Huddle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202B; --muted:#66747F; --line:#D5DCE3; --peer:#E4E9EE; --cell:#F4F6F9;
+  --stage-top:#FFFFFF; --stage-bot:#F0F3F7; --shadow:rgba(22,32,43,.16);
+  --accent:#D98A00; --accent-soft:#F8E7C6; --bad:#C23B33; --ok:#23895A; --ok-soft:#DCEFE3;
+  --brass:#A9792A; --bowl1:#F3ECDC; --bowl2:#D9C9A2; --bowl3:#E8DDC0;
+  --h0:#FFC933; --h0b:#FFDD73; --t0:#4A3300;
+  --h1:#0FA386; --h1b:#2FC9A8; --t1:#FFFFFF;
+  --h2:#4A2DB5; --h2b:#6A4FD6; --t2:#FFFFFF;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151C; --surface:#18212B; --ink:#E8EDF2; --muted:#8E9CA9; --line:#2B3744; --peer:#212C38; --cell:#1C2631;
+  --stage-top:#1B2530; --stage-bot:#141C25; --shadow:rgba(0,0,0,.5);
+  --accent:#F2B13F; --accent-soft:#3A2E17; --bad:#F2736A; --ok:#5DC98B; --ok-soft:#183325;
+  --brass:#D9B055; --bowl1:#4B4434; --bowl2:#2E291F; --bowl3:#3B3527;
+  --h0:#FFCF4D; --h0b:#FFE08A; --t0:#2A1E00;
+  --h1:#19B896; --h1b:#3FD8B5; --t1:#FFFFFF;
+  --h2:#6448D8; --h2b:#8670F0; --t2:#FFFFFF; color-scheme:dark }}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:500px;margin:0 auto;padding-block:14px 36px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.tabs{display:flex;gap:22px;align-items:flex-end}
+.tabs button{position:relative;border:0;background:none;padding:2px 0 8px;font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.025em;line-height:1;color:var(--line);transition:color .25s}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.tabs button::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;border-radius:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.tabs button[aria-selected="true"]::after{transform:scaleX(1)}
+
+.panel{display:flex;flex-direction:column;gap:12px}
+.panel[hidden]{display:none}
+.panel.enter{animation:rise .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.spacer{flex:1}
+#hd-mode{order:5}
+.seg{position:relative;display:inline-flex;background:var(--peer);border-radius:10px;padding:3px}
+.seg button{position:relative;z-index:1;border:0;background:transparent;padding:6px 11px;border-radius:8px;font-size:.88rem;font-weight:700;color:var(--muted);transition:color .2s}
+.seg button[aria-pressed="true"]{color:var(--ink)}
+.seg .thumb{position:absolute;top:3px;bottom:3px;border-radius:8px;background:var(--surface);box-shadow:0 1px 3px var(--shadow);transition:left .28s cubic-bezier(.2,.8,.2,1),width .28s cubic-bezier(.2,.8,.2,1)}
+.timer{font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.95rem;min-width:2.8em;text-align:right}
+.icon{width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.icon:hover,.icon[aria-expanded="true"]{background:var(--peer);color:var(--ink)}
+.icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.help{background:var(--surface);border-radius:14px;padding:14px 16px;font-size:.92rem;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 2px var(--shadow);animation:rise .25s cubic-bezier(.2,.8,.2,1)}
+.help[hidden]{display:none}
+.help p{margin:0}
+.help b{font-family:var(--display)}
+.help .muted{color:var(--muted)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:none;padding:4px 0 0;width:100%;text-align:left;color:var(--muted);font-size:.9rem}
+.switch .knob{flex:none;width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;transition:background .2s}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px var(--shadow);transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.switch[aria-checked="true"] .knob{background:var(--ink)}
+.switch[aria-checked="true"] .knob::after{transform:translateX(16px)}
+
+.foot{display:flex;align-items:center;gap:8px;min-height:40px}
+.toast{flex:1;font-size:.9rem;color:var(--muted);opacity:0;transform:translateY(4px);transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:none}
+.toast.warn{color:var(--bad)}
+.btn{border:0;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-weight:700;font-size:.92rem;transition:transform .12s}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:var(--peer);color:var(--ink)}
+
+.win{display:flex;align-items:center;gap:14px;background:var(--ok-soft);border-radius:16px;padding:14px 16px;animation:pop-in .45s cubic-bezier(.2,1.4,.4,1)}
+.win[hidden]{display:none}
+@keyframes pop-in{from{opacity:0;transform:translateY(10px) scale(.96)}}
+.win .badge{flex:none;width:40px;height:40px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center}
+.win .badge svg{width:22px;height:22px;fill:none;stroke:var(--surface);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:30;stroke-dashoffset:30;animation:draw .4s .2s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.win .txt{flex:1;min-width:0}
+.win .big{font-family:var(--display);font-weight:800;font-size:1.25rem;line-height:1.1;color:var(--ink)}
+.win .small{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.win .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+/* ---------- Scales ---------- */
+.stage{background:linear-gradient(var(--stage-top),var(--stage-bot));border-radius:20px;padding:4px 6px 10px;box-shadow:0 1px 2px var(--shadow);display:flex;justify-content:center;touch-action:none}
+.stage svg{width:100%;height:auto;max-height:60vh;display:block;overflow:visible}
+.stage [data-pan]{cursor:pointer}
+.stage [data-item]{cursor:grab}
+.tray{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:4px 0;min-height:54px}
+.die{width:46px;height:46px;border:0;background:transparent;padding:0;border-radius:11px;touch-action:none;transition:transform .18s cubic-bezier(.2,1.4,.4,1),filter .18s;cursor:grab}
+.die svg{width:100%;height:100%;display:block;overflow:visible}
+.die.sel{transform:translateY(-6px) scale(1.06);filter:drop-shadow(0 6px 6px var(--shadow))}
+.die.sel .face{stroke:var(--accent);stroke-width:2.6}
+.die.lifted{opacity:.25}
+.die:disabled{cursor:default}
+.die.back{animation:pop-in .3s cubic-bezier(.2,1.4,.4,1)}
+.ghost-die{position:fixed;left:0;top:0;width:58px;height:58px;pointer-events:none;z-index:50;filter:drop-shadow(0 10px 8px var(--shadow))}
+.ghost-die svg{width:100%;height:100%;display:block;overflow:visible}
+.dots{margin:-4px 0 0;text-align:center;color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
+
+/* ---------- Huddle ---------- */
+.board{background:var(--surface);border-radius:22px;padding:10px;box-shadow:0 1px 2px var(--shadow),0 10px 24px -14px var(--shadow)}
+.hgrid{display:grid;gap:6px;width:100%}
+.hc{position:relative;aspect-ratio:1/1;min-width:0;min-height:0;overflow:hidden;border:0;border-radius:12px;background:var(--cell);box-shadow:inset 0 0 0 1.5px var(--line);padding:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:clamp(1.15rem,6vw,1.75rem);line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);transition:box-shadow .2s}
+.hc.k0,.hc.k1,.hc.k2{box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -4px 0 rgba(0,0,0,.16),0 1px 2px var(--shadow)}
+.hc.k0{background:linear-gradient(165deg,var(--h0b),var(--h0));color:var(--t0)}
+.hc.k1{background:linear-gradient(165deg,var(--h1b),var(--h1));color:var(--t1)}
+.hc.k2{background:linear-gradient(165deg,var(--h2b),var(--h2));color:var(--t2)}
+.hc .gl{position:absolute;top:5px;left:7px;font-size:.5em;opacity:.8;line-height:1}
+.hc.given::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;bottom:6px;right:6px}
+.hc .num{display:flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;transition:opacity .3s,background-color .2s}
+.hc .num.met{opacity:.4}
+.hc .num.bad{color:var(--bad);background:var(--surface);box-shadow:0 1px 3px var(--shadow);font-size:.9em}
+.hc.just{animation:paint .28s cubic-bezier(.2,1.5,.4,1)}
+@keyframes paint{0%{transform:scale(.8)}100%{transform:scale(1)}}
+.hgrid.won .hc{animation:wave .55s cubic-bezier(.2,1.2,.4,1) both}
+@keyframes wave{40%{transform:translateY(-5px) scale(1.06);filter:brightness(1.12)}100%{transform:none}}
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sw{position:relative;height:58px;border:0;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--display);font-weight:800;font-size:1.35rem;font-variant-numeric:tabular-nums;box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -4px 0 rgba(0,0,0,.16);transition:transform .18s cubic-bezier(.2,1.4,.4,1),opacity .2s}
+.sw:active{transform:scale(.95)}
+.sw[aria-pressed="true"]{transform:translateY(-4px);box-shadow:0 0 0 3px var(--bg),0 0 0 5.5px var(--ink),0 8px 12px var(--shadow)}
+.sw.out{opacity:.35}
+.sw.erase{background:var(--peer);color:var(--muted);box-shadow:none}
+.sw.erase[aria-pressed="true"]{color:var(--ink);box-shadow:0 0 0 3px var(--bg),0 0 0 5.5px var(--ink)}
+.sw .g{font-size:.8rem;opacity:.85}
+.sw svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabs" role="tablist">
+    <button id="tab-scales" role="tab" aria-selected="true" aria-controls="scales">Scales</button>
+    <button id="tab-huddle" role="tab" aria-selected="false" aria-controls="huddle">Huddle</button>
+  </nav>
+
+  <section class="panel" id="scales" role="tabpanel" aria-labelledby="tab-scales">
+    <div class="toolbar">
+      <div class="seg" id="sc-diff">
+        <button id="sd-e" data-l="easy" aria-pressed="true">Easy</button>
+        <button id="sd-m" data-l="medium" aria-pressed="false">Medium</button>
+        <button id="sd-h" data-l="hard" aria-pressed="false">Hard</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="timer" id="sc-time">0:00</span>
+      <button class="icon" id="sc-help-btn" aria-label="How to play" aria-expanded="false" aria-controls="sc-help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.5"/><path d="M12 16.9v.1"/></svg></button>
+    </div>
+    <div class="help" id="sc-help" hidden>
+      <p>Hang every die so <b>each bar balances</b>: both sides under a bar hold the same number of dots.</p>
+    </div>
+    <div class="stage" id="sc-stage"></div>
+    <div class="tray" id="sc-tray"></div>
+    <p class="dots" id="sc-dots"></p>
+    <div class="win" id="sc-win" hidden></div>
+    <div class="foot">
+      <span class="toast" id="sc-toast" aria-live="polite"></span>
+      <button class="icon" id="sc-clear" aria-label="Take all dice back"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg></button>
+      <button class="btn ghost" id="sc-new">New</button>
+    </div>
+  </section>
+
+  <section class="panel" id="huddle" role="tabpanel" aria-labelledby="tab-huddle" hidden>
+    <div class="toolbar">
+      <div class="seg" id="hd-diff">
+        <button id="hd-e" data-l="easy" aria-pressed="true">4×4</button>
+        <button id="hd-m" data-l="medium" aria-pressed="false">5×5</button>
+        <button id="hd-h" data-l="hard" aria-pressed="false">6×6</button>
+      </div>
+      <div class="seg" id="hd-mode">
+        <button id="hm-g" data-g="1" aria-pressed="true">Groups</button>
+        <button id="hm-c" data-g="0" aria-pressed="false">Classic</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="timer" id="hd-time">0:00</span>
+      <button class="icon" id="hd-help-btn" aria-label="How to play" aria-expanded="false" aria-controls="hd-help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.5"/><path d="M12 16.9v.1"/></svg></button>
+    </div>
+    <div class="help" id="hd-help" hidden>
+      <p>Color every square. A number says <b>how many neighbors share its color</b>, counting up, down, left and right.</p>
+      <p id="hd-group-rule"><b>Groups:</b> each color must form one connected shape.</p>
+      <p class="muted">Tap a painted square again to clear it. Dotted squares are fixed.</p>
+      <button class="switch" id="hd-sym" role="switch" aria-checked="false">Show symbols on colors<span class="knob"></span></button>
+    </div>
+    <div class="board"><div class="hgrid" id="hd-grid"></div></div>
+    <div class="palette" id="hd-pal"></div>
+    <div class="win" id="hd-win" hidden></div>
+    <div class="foot">
+      <span class="toast" id="hd-toast" aria-live="polite"></span>
+      <button class="icon" id="hd-clear" aria-label="Clear the board"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg></button>
+      <button class="btn ghost" id="hd-new">New</button>
+    </div>
+  </section>
+</div>
+
+<script>
+// GEN-START
+const rnd=n=>Math.floor(Math.random()*n);
+const range=n=>[...Array(n).keys()];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+const popc=x=>{let k=0;while(x){x&=x-1;k++}return k};
+const lowbit=x=>31-Math.clz32(x&-x);
+
+/* ================= SCALES (hanging mobile, equal arms, dice weights) ================= */
+// depth = number of bar layers a pan can hang below; harder levels are taller as well as wider.
+const MOB_LEVELS={
+  easy:  {pans:3,depth:2,minW:6, maxW:8 },
+  medium:{pans:5,depth:3,minW:9, maxW:11},
+  hard:  {pans:7,depth:4,minW:12,maxW:14}
+};
+function mobShape(k,d){
+  if(k===1)return{pan:true};
+  if(d===0)return null;
+  const i=1+rnd(k-1),l=mobShape(i,d-1),r=mobShape(k-i,d-1);
+  return l&&r?{pan:false,l,r}:null;
+}
+function pansOf(node,depth=0,out=[]){
+  if(node.pan){node.depth=depth;out.push(node)}else{pansOf(node.l,depth+1,out);pansOf(node.r,depth+1,out)}
+  return out;
+}
+function multisets(c,s){ // sorted arrays of c dice values (1-6) summing to s
+  const out=[];
+  (function go(cur,start,rem){
+    if(cur.length===c){if(rem===0)out.push(cur.slice());return}
+    for(let v=start;v<=6;v++){
+      const left=c-cur.length;
+      if(v*left>rem)break;
+      if(6*left<rem)continue;
+      cur.push(v);go(cur,v,rem-v);cur.pop();
+    }
+  })([],1,s);
+  return out;
+}
+const cnt=(ms,v)=>ms.reduce((a,x)=>a+(x===v),0);
+function mobSolution(level){
+  const {pans:k,depth,minW,maxW}=MOB_LEVELS[level];
+  for(let t=0;t<20000;t++){
+    const root=mobShape(k,depth);if(!root||root.pan)continue;
+    const P=pansOf(root);
+    const maxD=Math.max(...P.map(p=>p.depth));
+    if(maxD<depth)continue; // must actually reach the level's height
+    P.forEach((p,i)=>{p.id=i;p.cap=1+rnd(3)});
+    const nW=P.reduce((a,p)=>a+p.cap,0);if(nW<minW||nW>maxW)continue;
+    const unit=1<<maxD,totals=[];
+    for(let T=unit;T<=200;T+=unit)if(P.every(p=>{const s=T>>p.depth;return s>=p.cap&&s<=6*p.cap}))totals.push(T);
+    if(!totals.length)continue;
+    const T=totals[rnd(totals.length)];
+    P.forEach(p=>{p.sum=T>>p.depth;const o=multisets(p.cap,p.sum);p.ms=o[rnd(o.length)]});
+    const inv=[0,0,0,0,0,0,0];P.forEach(p=>p.ms.forEach(v=>inv[v]++));
+    if(inv.filter(Boolean).length<4)continue; // keep some variety in the tray
+    return{root,pans:P,total:T,inv};
+  }
+  return null;
+}
+// Human-style solver: list the dice combinations each pan could hold, then cross them with the tray supply.
+function solveMob(pz,locks){
+  const P=pz.pans,inv=pz.inv;
+  const lockedIn=i=>locks.filter(l=>l[0]===i).map(l=>l[1]);
+  let cand=P.map((p,i)=>multisets(p.cap,p.sum).filter(ms=>{
+    const need=lockedIn(i);return [1,2,3,4,5,6].every(v=>cnt(ms,v)>=cnt(need,v));
+  }));
+  let rounds=0,changed=true;
+  while(changed){
+    changed=false;rounds++;if(rounds>40)break;
+    for(let v=1;v<=6;v++){
+      const mins=cand.map(cs=>Math.min(...cs.map(ms=>cnt(ms,v)))),maxs=cand.map(cs=>Math.max(...cs.map(ms=>cnt(ms,v))));
+      const sMin=mins.reduce((a,b)=>a+b,0),sMax=maxs.reduce((a,b)=>a+b,0);
+      cand=cand.map((cs,i)=>{
+        const lo=inv[v]-(sMax-maxs[i]),hi=inv[v]-(sMin-mins[i]);
+        const f=cs.filter(ms=>{const c=cnt(ms,v);return c>=lo&&c<=hi});
+        if(f.length!==cs.length)changed=true;
+        return f;
+      });
+      if(cand.some(cs=>!cs.length))return{solved:false,broken:true};
+    }
+  }
+  return{solved:cand.every(cs=>cs.length===1),rounds,cand};
+}
+function genMobile(level){
+  for(let t=0;t<300;t++){
+    const pz=mobSolution(level);if(!pz)continue;
+    const pool=shuffle(pz.pans.flatMap(p=>p.ms.map(v=>[p.id,v])));
+    let locks=[];
+    for(const l of pool){if(solveMob(pz,locks).solved)break;locks.push(l)}
+    if(!solveMob(pz,locks).solved)continue;
+    for(const l of shuffle(locks.slice())){const tr=locks.filter(x=>x!==l);if(solveMob(pz,tr).solved)locks=tr}
+    const nW=pz.pans.reduce((a,p)=>a+p.cap,0);
+    if(locks.length>Math.floor(nW/4))continue;
+    const r=solveMob(pz,locks);
+    if(r.rounds<(level==='easy'?2:3))continue;
+    return{...pz,locks,rounds:r.rounds,nW};
+  }
+  return null;
+}
+
+/* ================= HUDDLE ================= */
+const HUDDLE_LEVELS={easy:{n:4,counts:[7,5,4]},medium:{n:5,counts:[10,8,7]},hard:{n:6,counts:[14,12,10]}};
+function nbrs(n,i){const r=i/n|0,c=i%n,o=[];if(r)o.push(i-n);if(r<n-1)o.push(i+n);if(c)o.push(i-1);if(c<n-1)o.push(i+1);return o}
+function sameCount(n,g,i){return nbrs(n,i).filter(j=>g[j]===g[i]).length}
+function huddleScatter(n,counts){
+  const g=shuffle(counts.flatMap((c,k)=>Array(c).fill(k)));
+  const score=()=>{let s=0;for(let i=0;i<n*n;i++)s+=sameCount(n,g,i);return s};
+  let sc=score();
+  for(let t=0;t<n*n*25;t++){
+    const a=rnd(n*n),b=rnd(n*n);if(g[a]===g[b])continue;
+    [g[a],g[b]]=[g[b],g[a]];const s2=score();
+    if(s2>=sc||Math.random()<0.25)sc=s2;else [g[a],g[b]]=[g[b],g[a]];
+    if(sc>n*n*1.5)break;
+  }
+  return g;
+}
+function huddleGroups(n,counts){
+  for(let t=0;t<500;t++){
+    const N=n*n,g=Array(N).fill(-1),size=counts.map(()=>1);
+    const seeds=shuffle(range(N)).slice(0,counts.length);
+    seeds.forEach((s,k)=>g[s]=k);
+    let left=N-counts.length,stuck=false;
+    while(left>0){
+      const ks=shuffle(range(counts.length).filter(k=>size[k]<counts[k]));
+      let placed=false;
+      for(const k of ks){
+        const fr=range(N).filter(i=>g[i]<0&&nbrs(n,i).some(j=>g[j]===k));
+        if(!fr.length)continue;
+        g[fr[rnd(fr.length)]]=k;size[k]++;left--;placed=true;break;
+      }
+      if(!placed){stuck=true;break}
+    }
+    if(!stuck)return g;
+  }
+  return null;
+}
+function flood(n,start,ok){ // cells reachable from start through cells where ok(i)
+  const seen=new Set([start]),st=[start];
+  while(st.length){const i=st.pop();for(const j of nbrs(n,i))if(!seen.has(j)&&ok(j)){seen.add(j);st.push(j)}}
+  return seen;
+}
+function solveHuddle(pz,clueSet,givens){
+  const {n,counts,num,groups}=pz,C=counts.length,N=n*n,ALL=(1<<C)-1;
+  const dom=Array(N).fill(ALL);
+  for(const i of givens)dom[i]=1<<pz.sol[i];
+  const NB=range(N).map(i=>nbrs(n,i));
+  let rounds=0,changed=true;
+  while(changed){
+    changed=false;rounds++;if(rounds>80)break;
+    for(let k=0;k<C;k++){ // supply counting
+      const fixed=range(N).filter(i=>dom[i]===1<<k).length,poss=range(N).filter(i=>dom[i]>>k&1);
+      if(fixed>counts[k]||poss.length<counts[k])return{solved:false,broken:true};
+      if(fixed===counts[k])for(const i of poss)if(dom[i]!==1<<k){dom[i]&=~(1<<k);changed=true}
+      if(poss.length===counts[k])for(const i of poss)if(dom[i]!==1<<k){dom[i]=1<<k;changed=true}
+    }
+    for(const c of clueSet){ // each clue with its neighbours
+      const cells=[c,...NB[c]],seen=cells.map(()=>0),need=num[c];let ok=0;
+      const asg=Array(cells.length);
+      (function go(j){
+        if(j===cells.length){
+          let m=0;for(let t=1;t<cells.length;t++)if(asg[t]===asg[0])m++;
+          if(m!==need)return;ok++;for(let t=0;t<cells.length;t++)seen[t]|=1<<asg[t];return;
+        }
+        let d=dom[cells[j]];
+        while(d){const k=lowbit(d);d&=d-1;asg[j]=k;go(j+1)}
+      })(0);
+      if(!ok)return{solved:false,broken:true};
+      cells.forEach((i,t)=>{if(dom[i]!==seen[t]){dom[i]=seen[t];changed=true}});
+    }
+    if(groups)for(let k=0;k<C;k++){ // one connected group per color
+      const fixedK=range(N).filter(i=>dom[i]===1<<k);if(!fixedK.length)continue;
+      const can=i=>(dom[i]>>k&1)===1;
+      const reach=flood(n,fixedK[0],can);
+      if(fixedK.some(i=>!reach.has(i))||reach.size<counts[k])return{solved:false,broken:true};
+      for(let i=0;i<N;i++)if(can(i)&&!reach.has(i)){dom[i]&=~(1<<k);changed=true} // too far from the group
+      for(const x of reach){ // the only bridge, or the group would be too small without it
+        if(dom[x]===1<<k)continue;
+        const r2=flood(n,fixedK[0],i=>i!==x&&can(i));
+        if(fixedK.some(i=>!r2.has(i))||r2.size<counts[k]){dom[x]=1<<k;changed=true}
+      }
+    }
+  }
+  return{solved:dom.every(d=>popc(d)===1),rounds};
+}
+function genHuddle(level,groups){
+  const {n,counts}=HUDDLE_LEVELS[level],N=n*n;
+  for(let t=0;t<80;t++){
+    const sol=groups?huddleGroups(n,counts):huddleScatter(n,counts);if(!sol)continue;
+    const pz={n,counts,groups,sol,num:range(N).map(i=>sameCount(n,sol,i))};
+    let clues=range(N),givens=[];
+    const order=shuffle(range(N));let gi=0;
+    while(!solveHuddle(pz,clues,givens).solved&&gi<N)givens.push(order[gi++]);
+    if(givens.length>Math.ceil(N/8))continue;
+    for(const c of shuffle(clues.slice())){const tr=clues.filter(x=>x!==c);if(solveHuddle(pz,tr,givens).solved)clues=tr}
+    for(const g of shuffle(givens.slice())){const tr=givens.filter(x=>x!==g);if(solveHuddle(pz,clues,tr).solved)givens=tr}
+    const r=solveHuddle(pz,clues,givens);
+    if(r.rounds<3)continue;
+    return{...pz,clues,givens,rounds:r.rounds};
+  }
+  return null;
+}
+// GEN-END
+
+const $=id=>document.getElementById(id);
+const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+const reduceMotion=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
+function makeTimer(el){let start=0,stopped=0,h=null;return{
+  start(){start=Date.now();stopped=0;clearInterval(h);el.textContent='0:00';h=setInterval(()=>{el.textContent=fmt(this.secs())},1000)},
+  stop(){if(!stopped){stopped=Date.now();clearInterval(h);el.textContent=fmt(this.secs())}},
+  secs(){return Math.floor(((stopped||Date.now())-start)/1000)}}}
+const toasts={};
+function toast(id,msg,warn){
+  const el=$(id);el.textContent=msg;el.className='toast show'+(warn?' warn':'');
+  clearTimeout(toasts[id]);toasts[id]=setTimeout(()=>{el.className='toast'+(warn?' warn':'')},2400);
+}
+function hideToast(id){$(id).className='toast'}
+const LEVEL_NAME={easy:'Easy',medium:'Medium',hard:'Hard'};
+
+/* segmented controls with a sliding thumb */
+function segInit(seg){const t=document.createElement('span');t.className='thumb';seg.prepend(t);segSync(seg)}
+function segSync(seg){
+  const on=[...seg.querySelectorAll('button')].find(b=>b.getAttribute('aria-pressed')==='true'),t=seg.querySelector('.thumb');
+  if(on&&t){t.style.left=on.offsetLeft+'px';t.style.width=on.offsetWidth+'px'}
+}
+function segSet(seg,btn){for(const b of seg.querySelectorAll('button'))b.setAttribute('aria-pressed',b===btn);segSync(seg)}
+document.querySelectorAll('.seg').forEach(segInit);
+addEventListener('resize',()=>document.querySelectorAll('.seg').forEach(segSync));
+try{document.fonts&&document.fonts.ready.then(()=>document.querySelectorAll('.seg').forEach(segSync))}catch(e){}
+
+/* help panels: open on first visit */
+function helpInit(game){
+  const btn=$(game+'-help-btn'),panel=$(game+'-help');
+  const set=open=>{panel.hidden=!open;btn.setAttribute('aria-expanded',open)};
+  btn.onclick=()=>{set(panel.hidden);store('sh-seen-'+game,'1')};
+  if(!store('sh-seen-'+game)){set(true);store('sh-seen-'+game,'1')}
+}
+
+function showTab(name){
+  for(const t of ['scales','huddle']){
+    $('tab-'+t).setAttribute('aria-selected',t===name);
+    const p=$(t);p.hidden=t!==name;
+    if(t===name){p.classList.remove('enter');void p.offsetWidth;p.classList.add('enter')}
+  }
+  store('sh-tab',name);
+  if(name==='huddle'&&!H.p)newHuddle();
+  if(name==='scales'&&!S.p)newScales();
+  document.querySelectorAll('.seg').forEach(segSync);
+}
+$('tab-scales').onclick=()=>showTab('scales');
+$('tab-huddle').onclick=()=>showTab('huddle');
+
+const CHECK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function showWin(id,title,detail,shareText,onNext){
+  const el=$(id);
+  el.innerHTML=`<span class="badge">${CHECK}</span><div class="txt"><div class="big">${title}</div><div class="small">${detail}</div></div><div class="acts"><button class="btn ghost" data-act="copy">Copy</button><button class="btn" data-act="next">Next</button></div>`;
+  el.hidden=false;
+  el.querySelector('[data-act="next"]').onclick=onNext;
+  const cb=el.querySelector('[data-act="copy"]');
+  cb.onclick=()=>{
+    const done=()=>{cb.textContent='Copied'};
+    try{navigator.clipboard.writeText(shareText).then(done,()=>{cb.textContent='Copy failed'})}catch(e){cb.textContent='Copy failed'}
+  };
+}
+
+/* ================= Scales UI ================= */
+const PIPS={1:[[.5,.5]],2:[[.28,.28],[.72,.72]],3:[[.27,.27],[.5,.5],[.73,.73]],4:[[.28,.28],[.72,.28],[.28,.72],[.72,.72]],
+  5:[[.27,.27],[.73,.27],[.5,.5],[.27,.73],[.73,.73]],6:[[.28,.24],[.72,.24],[.28,.5],[.72,.5],[.28,.76],[.72,.76]]};
+function dieSVG(v,x,y,s,locked,extra=''){
+  const fill=locked?'var(--ink)':'var(--surface)',pip=locked?'var(--bg)':'var(--ink)';
+  return `<g ${extra}><rect x="${x}" y="${y+s*.07}" width="${s}" height="${s}" rx="${s*.22}" fill="var(--shadow)"/>`+
+    `<rect class="face" x="${x}" y="${y}" width="${s}" height="${s}" rx="${s*.22}" fill="${fill}" stroke="${locked?'var(--ink)':'var(--line)'}" stroke-width="1.4"/>`+
+    PIPS[v].map(([px,py])=>`<circle cx="${x+px*s}" cy="${y+py*s}" r="${s*.092}" fill="${pip}"/>`).join('')+'</g>';
+}
+const easeBack=x=>{const c1=1.6,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const S={p:null,level:'easy',items:[],sel:-1,hover:-1,won:false,ang:new Map(),vel:new Map(),drop:new Map(),pulse:new Map(),bal:new Set(),raf:0,timer:makeTimer($('sc-time'))};
+const DIE=30,HOOK=24,BOWL=40,DROP=52;
+function mobLayout(node){
+  if(node.pan){node.W=node.cap*(DIE+6)+16;node.L=node.R=node.W/2;node.H=HOOK+BOWL;return}
+  mobLayout(node.l);mobLayout(node.r);
+  node.a=Math.max(40,(node.l.R+node.r.L+16)/2);
+  node.L=node.a+node.l.L;node.R=node.a+node.r.R;
+  node.H=DROP+Math.max(node.l.H,node.r.H)+22;
+}
+function newScales(){
+  let p=null;while(!p)p=genMobile(S.level);
+  Object.assign(S,{p,sel:-1,hover:-1,won:false,ang:new Map(),vel:new Map(),drop:new Map(),pulse:new Map(),bal:new Set()});
+  const items=[];
+  for(const [pan,v] of p.locks)items.push({v,locked:true,at:pan});
+  const pool=[];p.pans.forEach(pn=>pn.ms.forEach(v=>pool.push(v)));
+  for(const [,v] of p.locks)pool.splice(pool.indexOf(v),1);
+  pool.sort((a,b)=>a-b).forEach(v=>items.push({v,locked:false,at:-1}));
+  S.items=items;
+  mobLayout(p.root);
+  let id=0;(function tag(n){if(!n.pan){n.bid=id++;tag(n.l);tag(n.r)}})(p.root);
+  $('sc-dots').textContent=`${p.total} dots in all`;
+  $('sc-win').hidden=true;hideToast('sc-toast');
+  renderTray();renderScales();animate();S.timer.start();
+}
+const inPan=pan=>S.items.map((it,i)=>[it,i]).filter(([it])=>it.at===pan).sort((a,b)=>b[0].locked-a[0].locked);
+function subtree(node){
+  if(node.pan){const d=inPan(node.id);return{dots:d.reduce((a,[it])=>a+it.v,0),full:d.length===node.cap}}
+  const l=subtree(node.l),r=subtree(node.r);return{dots:l.dots+r.dots,full:l.full&&r.full,l,r};
+}
+function bars(){const out=[];(function walk(n){if(!n.pan){out.push(n);walk(n.l);walk(n.r)}})(S.p.root);return out}
+function targetAngle(node){const s=subtree(node);return Math.max(-0.26,Math.min(0.26,(s.r.dots-s.l.dots)*0.045))}
+function bowlPath(x,rim,W){
+  const h=BOWL;
+  return `M${x-W/2} ${rim} L${x+W/2} ${rim} C${x+W/2-1} ${rim+h*.7} ${x+W/2-12} ${rim+h} ${x+W/2-26} ${rim+h} L${x-W/2+26} ${rim+h} C${x-W/2+12} ${rim+h} ${x-W/2+1} ${rim+h*.7} ${x-W/2} ${rim} Z`;
+}
+function drawMob(node,x,y,out,now){
+  if(node.pan){
+    const W=node.W,rim=y+HOOK,d=inPan(node.id),open=d.length<node.cap;
+    const hot=S.hover===node.id&&open,hint=S.sel>=0&&open&&!hot;
+    const edge=hot||hint?'var(--accent)':'var(--brass)';
+    out.push(`<g data-pan="${node.id}">`);
+    out.push(`<rect x="${x-W/2-4}" y="${y-4}" width="${W+8}" height="${HOOK+BOWL+8}" fill="transparent"/>`);
+    out.push(`<path d="M${x-W/2+5} ${rim}L${x} ${y+3}L${x+W/2-5} ${rim}" fill="none" stroke="var(--brass)" stroke-width="1.1" stroke-linejoin="round" opacity=".85"/>`);
+    out.push(`<circle cx="${x}" cy="${y+1}" r="2.8" fill="var(--surface)" stroke="var(--brass)" stroke-width="1.5"/>`);
+    out.push(`<clipPath id="cb${node.id}"><path d="${bowlPath(x,rim,W)}"/></clipPath>`);
+    out.push(`<path d="${bowlPath(x,rim,W)}" fill="var(--bowl3)"/>`);
+    const row=node.cap*(DIE+6)-6,x0=x-row/2,dy=rim-13;
+    for(let i=0;i<node.cap;i++){
+      const dx=x0+i*(DIE+6);
+      if(d[i]){
+        const [it,idx]=d[i],t0=S.drop.get(idx);let off=0,op=1;
+        if(t0!=null){const p=Math.min(1,(now-t0)/340);off=(1-easeBack(p))*-34;op=Math.min(1,p*3)}
+        out.push(`<g opacity="${op}">${dieSVG(it.v,dx,dy+off,DIE,it.locked,`data-item="${idx}"`)}</g>`);
+      }else out.push(`<rect x="${dx+2}" y="${dy+2}" width="${DIE-4}" height="${DIE-4}" rx="6" fill="none" stroke="${edge}" stroke-opacity="${hot?1:.55}" stroke-width="1.3" stroke-dasharray="3 3"/>`);
+    }
+    out.push(`<rect x="${x-W/2}" y="${rim+14}" width="${W}" height="${BOWL}" fill="url(#bowlg)" clip-path="url(#cb${node.id})" pointer-events="none"/>`);
+    out.push(`<line x1="${x-W/2+6}" y1="${rim+15}" x2="${x+W/2-6}" y2="${rim+15}" stroke="#fff" stroke-opacity=".5" stroke-width="1" clip-path="url(#cb${node.id})" pointer-events="none"/>`);
+    out.push(`<path d="${bowlPath(x,rim,W)}" fill="none" stroke="${edge}" stroke-width="${hot?3:hint?2:1.4}" stroke-linejoin="round" pointer-events="none"/>`);
+    out.push(`<line x1="${x-W/2}" y1="${rim}" x2="${x+W/2}" y2="${rim}" stroke="${edge}" stroke-width="2.6" stroke-linecap="round" pointer-events="none"/>`);
+    out.push('</g>');
+    return;
+  }
+  const th=S.ang.get(node.bid)||0,cs=Math.cos(th),sn=Math.sin(th),a=node.a;
+  const lx=x-a*cs,ly=y-a*sn,rx=x+a*cs,ry=y+a*sn;
+  const s=subtree(node);
+  const col=s.full?(s.l.dots===s.r.dots?'var(--ok)':'var(--bad)'):'var(--brass)';
+  if(!node.l.pan)out.push(`<line x1="${lx}" y1="${ly}" x2="${lx}" y2="${ly+DROP}" stroke="var(--brass)" stroke-width="1.2" opacity=".85"/>`);
+  if(!node.r.pan)out.push(`<line x1="${rx}" y1="${ry}" x2="${rx}" y2="${ry+DROP}" stroke="var(--brass)" stroke-width="1.2" opacity=".85"/>`);
+  drawMob(node.l,lx,node.l.pan?ly:ly+DROP,out,now);
+  drawMob(node.r,rx,node.r.pan?ry:ry+DROP,out,now);
+  // beam: soft shadow, body, highlight, finials
+  out.push(`<line x1="${lx}" y1="${ly+2.5}" x2="${rx}" y2="${ry+2.5}" stroke="var(--shadow)" stroke-width="6" stroke-linecap="round"/>`);
+  out.push(`<line x1="${lx}" y1="${ly}" x2="${rx}" y2="${ry}" stroke="${col}" stroke-width="6" stroke-linecap="round" style="transition:stroke .25s"/>`);
+  out.push(`<line x1="${lx}" y1="${ly-1.3}" x2="${rx}" y2="${ry-1.3}" stroke="#fff" stroke-opacity=".38" stroke-width="1.6" stroke-linecap="round"/>`);
+  for(const [fx,fy] of [[lx,ly],[rx,ry]])out.push(`<circle cx="${fx}" cy="${fy}" r="3.6" fill="var(--surface)" stroke="${col}" stroke-width="2"/>`);
+  const pt=S.pulse.get(node.bid);
+  if(pt!=null){const p=(now-pt)/700;if(p<1)out.push(`<circle cx="${x}" cy="${y}" r="${7+24*p}" fill="none" stroke="var(--ok)" stroke-width="${3*(1-p)}" opacity="${1-p}"/>`)}
+  out.push(`<circle cx="${x}" cy="${y}" r="7.5" fill="${col}" style="transition:fill .25s"/>`);
+  out.push(`<circle cx="${x}" cy="${y}" r="4.6" fill="var(--surface)"/>`);
+  out.push(`<circle cx="${x}" cy="${y}" r="1.8" fill="${col}"/>`);
+}
+function renderScales(){
+  const root=S.p.root,PAD=16,TOP=26,out=[],now=performance.now();
+  const W=root.L+root.R+PAD*2,Hh=TOP+root.H+PAD;
+  const x=PAD+root.L,y=PAD+TOP;
+  out.push(`<defs><linearGradient id="bowlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--bowl1)"/><stop offset="1" style="stop-color:var(--bowl2)"/></linearGradient></defs>`);
+  out.push(`<line x1="${PAD}" y1="${PAD}" x2="${W-PAD}" y2="${PAD}" stroke="var(--line)" stroke-width="5" stroke-linecap="round"/>`);
+  out.push(`<line x1="${x}" y1="${PAD}" x2="${x}" y2="${y}" stroke="var(--brass)" stroke-width="1.4"/>`);
+  out.push(`<circle cx="${x}" cy="${PAD}" r="4" fill="var(--brass)"/>`);
+  drawMob(root,x,y,out,now);
+  $('sc-stage').innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Hanging mobile with ${S.p.pans.length} pans">${out.join('')}</svg>`;
+}
+function renderTray(backIdx=-1){
+  const tray=$('sc-tray');tray.innerHTML='';
+  S.items.forEach((it,i)=>{
+    if(it.locked)return;
+    const b=document.createElement('button');b.className='die'+(S.sel===i?' sel':'')+(i===backIdx?' back':'')+(drag&&drag.moved&&drag.i===i?' lifted':'');b.id='die'+i;
+    const placed=it.at>=0;
+    b.disabled=placed||S.won;
+    b.setAttribute('aria-label',placed?'Empty spot':`Die showing ${it.v}`);
+    b.innerHTML=placed?`<svg viewBox="0 0 46 46"><rect x="5" y="5" width="36" height="36" rx="9" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 3"/></svg>`
+      :`<svg viewBox="0 0 46 46">${dieSVG(it.v,4,3,38,false)}</svg>`;
+    b.onclick=()=>{if(noClick)return;S.sel=S.sel===i?-1:i;buzz(5);renderTray();renderScales()};
+    b.onpointerdown=e=>ptDown(e,i);
+    tray.appendChild(b);
+  });
+}
+function animate(){
+  cancelAnimationFrame(S.raf);
+  const targets=new Map(bars().map(b=>[b.bid,targetAngle(b)]));
+  if(reduceMotion){for(const [k,v] of targets)S.ang.set(k,v);S.drop.clear();S.pulse.clear();renderScales();return}
+  const step=()=>{
+    const now=performance.now();let moving=false;
+    for(const [k,t] of targets){
+      let a=S.ang.get(k)||0,v=S.vel.get(k)||0;
+      v+=(t-a)*0.085;v*=0.82;a+=v;
+      if(Math.abs(v)>0.0004||Math.abs(t-a)>0.0004)moving=true;else{a=t;v=0}
+      S.ang.set(k,a);S.vel.set(k,v);
+    }
+    for(const [k,t0] of S.drop)if(now-t0>360)S.drop.delete(k);else moving=true;
+    for(const [k,t0] of S.pulse)if(now-t0>720)S.pulse.delete(k);else moving=true;
+    renderScales();
+    if(moving)S.raf=requestAnimationFrame(step);
+  };
+  step();
+}
+
+/* placing, tapping and dragging */
+let drag=null,ghost=null,noClick=false;
+const DRAG_PX=8;
+function placeInto(i,panId){
+  const node=S.p.pans[panId];
+  if(inPan(panId).length>=node.cap){toast('sc-toast','That pan is full',true);buzz([10,40,10]);return false}
+  S.items[i].at=panId;S.sel=-1;S.drop.set(i,performance.now());buzz(10);afterScales();return true;
+}
+function ptDown(e,i){
+  if(S.won||drag||(e.button!==undefined&&e.button>0))return;
+  if(S.items[i].locked)return;
+  drag={i,x0:e.clientX,y0:e.clientY,moved:false,origin:S.items[i].at};
+}
+$('sc-stage').addEventListener('pointerdown',e=>{
+  const d=e.target.closest('[data-item]');if(!d)return;
+  ptDown(e,+d.dataset.item);
+});
+function pointAt(e){const off=e.pointerType==='touch'?38:0;return{x:e.clientX,y:e.clientY-off}}
+addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(!drag.moved){
+    if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<DRAG_PX)return;
+    drag.moved=true;S.sel=-1;
+    const it=S.items[drag.i];
+    if(drag.origin>=0){it.at=-1;afterScales(-1,true)} // lift it out of its pan
+    ghost=document.createElement('div');ghost.className='ghost-die';
+    ghost.innerHTML=`<svg viewBox="0 0 46 46">${dieSVG(it.v,4,3,38,false)}</svg>`;
+    document.body.appendChild(ghost);
+    const lifted=$('die'+drag.i);if(lifted)lifted.classList.add('lifted');
+  }
+  const {x,y}=pointAt(e);
+  ghost.style.transform=`translate(${x-29}px,${y-29}px) scale(1.08)`;
+  const el=document.elementFromPoint(x,y),pan=el&&el.closest&&el.closest('[data-pan]');
+  const h=pan?+pan.dataset.pan:-1;
+  if(h!==S.hover){S.hover=h;renderScales()}
+});
+function endDrag(e,cancel){
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(d.moved){
+    if(ghost){ghost.remove();ghost=null}
+    noClick=true;setTimeout(()=>{noClick=false},120);
+    const {x,y}=pointAt(e),el=document.elementFromPoint(x,y),pan=!cancel&&el&&el.closest&&el.closest('[data-pan]');
+    S.hover=-1;
+    const it=S.items[d.i];
+    if(pan&&placeInto(d.i,+pan.dataset.pan))return;
+    if(pan&&d.origin>=0){it.at=d.origin;S.drop.set(d.i,performance.now())} // full pan: put it back where it was
+    afterScales(d.origin<0||!pan?d.i:-1);
+  }
+}
+addEventListener('pointerup',e=>endDrag(e,false));
+addEventListener('pointercancel',e=>endDrag(e,true));
+
+$('sc-stage').addEventListener('click',e=>{
+  if(S.won||noClick)return;
+  const die=e.target.closest('[data-item]');
+  if(die&&S.sel<0){const i=+die.dataset.item,it=S.items[i];if(!it.locked){it.at=-1;buzz(6);afterScales(i)}return}
+  const pan=e.target.closest('[data-pan]');
+  if(!pan||S.sel<0)return;
+  placeInto(S.sel,+pan.dataset.pan);
+});
+function afterScales(backIdx=-1,silent=false){
+  const now=performance.now(),nowBal=new Set();
+  for(const b of bars()){const s=subtree(b);if(s.full&&s.l.dots===s.r.dots){nowBal.add(b.bid);if(!S.bal.has(b.bid)&&!reduceMotion)S.pulse.set(b.bid,now)}}
+  S.bal=nowBal;
+  renderTray(backIdx);animate();
+  if(silent)return;
+  const allPlaced=S.items.every(it=>it.at>=0),allBal=bars().every(b=>{const s=subtree(b);return s.l.dots===s.r.dots});
+  if(allPlaced&&allBal){
+    S.won=true;S.timer.stop();renderTray();buzz([15,60,25]);
+    const t=fmt(S.timer.secs());
+    setTimeout(()=>showWin('sc-win','Hung level',`${LEVEL_NAME[S.level]} · ${t}`,`⚖️ Scales ${LEVEL_NAME[S.level]} · ${t}`,newScales),reduceMotion?0:420);
+  }else if(allPlaced)toast('sc-toast','A bar is tipping',true);
+  else hideToast('sc-toast');
+}
+$('sc-new').onclick=newScales;
+$('sc-clear').onclick=()=>{if(S.won)return;S.items.forEach(it=>{if(!it.locked)it.at=-1});S.sel=-1;afterScales()};
+for(const b of $('sc-diff').querySelectorAll('button'))b.onclick=()=>{S.level=b.dataset.l;segSet($('sc-diff'),b);newScales()};
+helpInit('sc');
+
+/* ================= Huddle UI ================= */
+const GLYPH=['●','▲','■'],CNAME=['Gold','Jade','Grape'];
+const H={p:null,level:'easy',groups:store('sh-groups')!=='0',sym:store('sh-sym')==='1',g:[],paint:0,won:false,just:-1,timer:makeTimer($('hd-time'))};
+function syncHuddleControls(){
+  segSet($('hd-mode'),H.groups?$('hm-g'):$('hm-c'));
+  $('hd-sym').setAttribute('aria-checked',H.sym);
+  $('hd-group-rule').hidden=!H.groups;
+}
+function newHuddle(){
+  syncHuddleControls();
+  let p=null;while(!p)p=genHuddle(H.level,H.groups);
+  H.p=p;H.g=Array(p.n*p.n).fill(-1);H.won=false;H.just=-1;
+  for(const i of p.givens)H.g[i]=p.sol[i];
+  if(H.p.counts[H.paint]==null)H.paint=0;
+  $('hd-win').hidden=true;hideToast('hd-toast');
+  $('hd-grid').classList.remove('won');
+  renderHuddle();H.timer.start();
+}
+function clueState(i){
+  const p=H.p,nb=nbrs(p.n,i),need=p.num[i],k=H.g[i];
+  if(k<0)return'';
+  const same=nb.filter(j=>H.g[j]===k).length,unknown=nb.filter(j=>H.g[j]<0).length;
+  if(same>need||same+unknown<need)return'bad';
+  return unknown===0?'met':'';
+}
+function renderHuddle(){
+  const p=H.p,n=p.n,grid=$('hd-grid'),clue=new Set(p.clues),giv=new Set(p.givens);
+  grid.style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`;
+  grid.innerHTML='';
+  for(let i=0;i<n*n;i++){
+    const b=document.createElement('button'),k=H.g[i];
+    b.className='hc'+(k>=0?' k'+k:'')+(giv.has(i)?' given':'')+(i===H.just?' just':'');b.id='hc'+i;
+    let html=k>=0&&H.sym?`<span class="gl">${GLYPH[k]}</span>`:'';
+    if(clue.has(i))html+=`<span class="num ${clueState(i)}">${p.num[i]}</span>`;
+    b.innerHTML=html;
+    b.setAttribute('aria-label',`Row ${(i/n|0)+1}, column ${i%n+1}: ${k>=0?CNAME[k]:'empty'}${clue.has(i)?', clue '+p.num[i]:''}${giv.has(i)?', fixed':''}`);
+    b.onclick=()=>tapCell(i);
+    grid.appendChild(b);
+  }
+  H.just=-1;
+  const pal=$('hd-pal');pal.innerHTML='';
+  p.counts.forEach((c,k)=>{
+    const left=c-H.g.filter(x=>x===k).length;
+    const b=document.createElement('button');b.className='sw'+(left<=0?' out':'');b.id='pc'+k;
+    b.style.background=`linear-gradient(165deg,var(--h${k}b),var(--h${k}))`;b.style.color=`var(--t${k})`;
+    b.setAttribute('aria-pressed',H.paint===k);b.setAttribute('aria-label',`${CNAME[k]}, ${left} left`);
+    b.innerHTML=`${H.sym?`<span class="g">${GLYPH[k]}</span>`:''}${left}`;
+    b.onclick=()=>{H.paint=k;buzz(5);renderHuddle()};
+    pal.appendChild(b);
+  });
+  const e=document.createElement('button');e.className='sw erase';e.id='pc-erase';e.setAttribute('aria-pressed',H.paint===-1);e.setAttribute('aria-label','Eraser');
+  e.innerHTML=`<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>`;e.onclick=()=>{H.paint=-1;buzz(5);renderHuddle()};
+  pal.appendChild(e);
+}
+function connectedOk(){
+  const p=H.p;
+  return p.counts.every((c,k)=>{const cells=range(p.n*p.n).filter(i=>H.g[i]===k);return !cells.length||flood(p.n,cells[0],i=>H.g[i]===k).size===cells.length});
+}
+function tapCell(i){
+  if(H.won)return;
+  if(H.p.givens.includes(i)){toast('hd-toast','That square is fixed');return}
+  if(H.paint<0||H.g[i]===H.paint){if(H.g[i]<0)return;H.g[i]=-1}
+  else{
+    const left=H.p.counts[H.paint]-H.g.filter(x=>x===H.paint).length;
+    if(left<=0){toast('hd-toast',`No ${CNAME[H.paint].toLowerCase()} left`,true);buzz([10,40,10]);return}
+    H.g[i]=H.paint;
+  }
+  H.just=i;buzz(8);renderHuddle();
+  const p=H.p,full=H.g.every(x=>x>=0);
+  const cluesOk=p.clues.every(c=>clueState(c)==='met'),conn=!p.groups||connectedOk();
+  if(full&&cluesOk&&conn){
+    H.won=true;H.timer.stop();buzz([15,60,25]);
+    const n=p.n,r0=i/n|0,c0=i%n;
+    document.querySelectorAll('#hd-grid .hc').forEach((el,j)=>{el.classList.remove('just');el.style.animationDelay=`${(Math.abs((j/n|0)-r0)+Math.abs(j%n-c0))*55}ms`});
+    $('hd-grid').classList.add('won');
+    const t=fmt(H.timer.secs()),mode=H.groups?'Groups':'Classic';
+    setTimeout(()=>showWin('hd-win','Huddled up',`${mode} ${n}×${n} · ${t}`,`🟨 Huddle ${mode} ${n}×${n} · ${t}`,newHuddle),reduceMotion?0:500);
+  }else if(full&&!cluesOk)toast('hd-toast','A number is off',true);
+  else if(full)toast('hd-toast','A color is split in two',true);
+  else hideToast('hd-toast');
+}
+$('hd-new').onclick=newHuddle;
+$('hd-clear').onclick=()=>{if(H.won)return;H.g=H.g.map((x,i)=>H.p.givens.includes(i)?x:-1);hideToast('hd-toast');renderHuddle()};
+for(const b of $('hd-diff').querySelectorAll('button'))b.onclick=()=>{H.level=b.dataset.l;segSet($('hd-diff'),b);newHuddle()};
+for(const b of $('hd-mode').querySelectorAll('button'))b.onclick=()=>{H.groups=b.dataset.g==='1';store('sh-groups',H.groups?'1':'0');newHuddle()};
+$('hd-sym').onclick=()=>{H.sym=!H.sym;store('sh-sym',H.sym?'1':'0');syncHuddleControls();renderHuddle()};
+helpInit('hd');
+
+showTab(store('sh-tab')==='huddle'?'huddle':'scales');
+</script>
+</body>
+</html>
