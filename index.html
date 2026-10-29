@@ -48,7 +48,6 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .spacer{flex:1}
-#hd-mode{order:5}
 .seg{position:relative;display:inline-flex;background:var(--peer);border-radius:10px;padding:3px}
 .seg button{position:relative;z-index:1;border:0;background:transparent;padding:6px 11px;border-radius:8px;font-size:.88rem;font-weight:700;color:var(--muted);transition:color .2s}
 .seg button[aria-pressed="true"]{color:var(--ink)}
@@ -90,7 +89,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ---------- Scales ---------- */
 .stage{background:linear-gradient(var(--stage-top),var(--stage-bot));border-radius:20px;padding:4px 6px 10px;box-shadow:0 1px 2px var(--shadow);display:flex;justify-content:center;touch-action:none}
-.stage svg{width:100%;height:auto;max-height:60vh;display:block;overflow:visible}
+.stage svg{width:100%;height:auto;max-height:64vh;display:block;overflow:visible}
 .stage [data-pan]{cursor:pointer}
 .stage [data-item]{cursor:grab}
 .tray{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:4px 0;min-height:54px}
@@ -107,7 +106,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ---------- Huddle ---------- */
 .board{background:var(--surface);border-radius:22px;padding:10px;box-shadow:0 1px 2px var(--shadow),0 10px 24px -14px var(--shadow)}
-.hgrid{display:grid;gap:6px;width:100%}
+.hgrid{display:grid;gap:6px;width:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .hc{position:relative;aspect-ratio:1/1;min-width:0;min-height:0;overflow:hidden;border:0;border-radius:12px;background:var(--cell);box-shadow:inset 0 0 0 1.5px var(--line);padding:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:clamp(1.15rem,6vw,1.75rem);line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);transition:box-shadow .2s}
 .hc.k0,.hc.k1,.hc.k2{box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -4px 0 rgba(0,0,0,.16),0 1px 2px var(--shadow)}
 .hc.k0{background:linear-gradient(165deg,var(--h0b),var(--h0));color:var(--t0)}
@@ -174,18 +173,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         <button id="hd-m" data-l="medium" aria-pressed="false">5×5</button>
         <button id="hd-h" data-l="hard" aria-pressed="false">6×6</button>
       </div>
-      <div class="seg" id="hd-mode">
-        <button id="hm-g" data-g="1" aria-pressed="true">Groups</button>
-        <button id="hm-c" data-g="0" aria-pressed="false">Classic</button>
-      </div>
       <span class="spacer"></span>
       <span class="timer" id="hd-time">0:00</span>
       <button class="icon" id="hd-help-btn" aria-label="How to play" aria-expanded="false" aria-controls="hd-help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.5"/><path d="M12 16.9v.1"/></svg></button>
     </div>
     <div class="help" id="hd-help" hidden>
       <p>Color every square. A number says <b>how many neighbors share its color</b>, counting up, down, left and right.</p>
-      <p id="hd-group-rule"><b>Groups:</b> each color must form one connected shape.</p>
-      <p class="muted">Tap a painted square again to clear it. Dotted squares are fixed.</p>
+      <p>Each color must form <b>one connected shape</b>.</p>
+      <p class="muted">Dotted squares are fixed.</p>
       <button class="switch" id="hd-sym" role="switch" aria-checked="false">Show symbols on colors<span class="knob"></span></button>
     </div>
     <div class="board"><div class="hgrid" id="hd-grid"></div></div>
@@ -210,14 +205,14 @@ const lowbit=x=>31-Math.clz32(x&-x);
 /* ================= SCALES (hanging mobile, equal arms, dice weights) ================= */
 // depth = number of bar layers a pan can hang below; harder levels are taller as well as wider.
 const MOB_LEVELS={
-  easy:  {pans:3,depth:2,minW:6, maxW:8 },
-  medium:{pans:5,depth:3,minW:9, maxW:11},
-  hard:  {pans:7,depth:4,minW:12,maxW:14}
+  easy:  {pans:3,depth:2,chain:0, minW:6, maxW:8, maxAspect:9},
+  medium:{pans:5,depth:4,chain:.9,minW:8, maxW:10,maxAspect:1.1},
+  hard:  {pans:6,depth:5,chain:.9,minW:10,maxW:13,maxAspect:1.0}
 };
-function mobShape(k,d){
+function mobShape(k,d,chain){ // chain = odds of peeling a single pan off a bar, which makes the mobile taller than wide
   if(k===1)return{pan:true};
   if(d===0)return null;
-  const i=1+rnd(k-1),l=mobShape(i,d-1),r=mobShape(k-i,d-1);
+  const i=Math.random()<chain?(Math.random()<.5?1:k-1):1+rnd(k-1),l=mobShape(i,d-1,chain),r=mobShape(k-i,d-1,chain);
   return l&&r?{pan:false,l,r}:null;
 }
 function pansOf(node,depth=0,out=[]){
@@ -239,14 +234,15 @@ function multisets(c,s){ // sorted arrays of c dice values (1-6) summing to s
 }
 const cnt=(ms,v)=>ms.reduce((a,x)=>a+(x===v),0);
 function mobSolution(level){
-  const {pans:k,depth,minW,maxW}=MOB_LEVELS[level];
+  const {pans:k,depth,chain,minW,maxW,maxAspect}=MOB_LEVELS[level];
   for(let t=0;t<20000;t++){
-    const root=mobShape(k,depth);if(!root||root.pan)continue;
+    const root=mobShape(k,depth,chain);if(!root||root.pan)continue;
     const P=pansOf(root);
     const maxD=Math.max(...P.map(p=>p.depth));
     if(maxD<depth)continue; // must actually reach the level's height
     P.forEach((p,i)=>{p.id=i;p.cap=1+rnd(3)});
     const nW=P.reduce((a,p)=>a+p.cap,0);if(nW<minW||nW>maxW)continue;
+    mobLayout(root);if((root.L+root.R+32)/(root.H+74)>maxAspect)continue; // keep it taller than wide so the dice stay big on a phone
     const unit=1<<maxD,totals=[];
     for(let T=unit;T<=200;T+=unit)if(P.every(p=>{const s=T>>p.depth;return s>=p.cap&&s<=6*p.cap}))totals.push(T);
     if(!totals.length)continue;
@@ -303,18 +299,6 @@ function genMobile(level){
 const HUDDLE_LEVELS={easy:{n:4,counts:[7,5,4]},medium:{n:5,counts:[10,8,7]},hard:{n:6,counts:[14,12,10]}};
 function nbrs(n,i){const r=i/n|0,c=i%n,o=[];if(r)o.push(i-n);if(r<n-1)o.push(i+n);if(c)o.push(i-1);if(c<n-1)o.push(i+1);return o}
 function sameCount(n,g,i){return nbrs(n,i).filter(j=>g[j]===g[i]).length}
-function huddleScatter(n,counts){
-  const g=shuffle(counts.flatMap((c,k)=>Array(c).fill(k)));
-  const score=()=>{let s=0;for(let i=0;i<n*n;i++)s+=sameCount(n,g,i);return s};
-  let sc=score();
-  for(let t=0;t<n*n*25;t++){
-    const a=rnd(n*n),b=rnd(n*n);if(g[a]===g[b])continue;
-    [g[a],g[b]]=[g[b],g[a]];const s2=score();
-    if(s2>=sc||Math.random()<0.25)sc=s2;else [g[a],g[b]]=[g[b],g[a]];
-    if(sc>n*n*1.5)break;
-  }
-  return g;
-}
 function huddleGroups(n,counts){
   for(let t=0;t<500;t++){
     const N=n*n,g=Array(N).fill(-1),size=counts.map(()=>1);
@@ -341,7 +325,7 @@ function flood(n,start,ok){ // cells reachable from start through cells where ok
   return seen;
 }
 function solveHuddle(pz,clueSet,givens){
-  const {n,counts,num,groups}=pz,C=counts.length,N=n*n,ALL=(1<<C)-1;
+  const {n,counts,num}=pz,C=counts.length,N=n*n,ALL=(1<<C)-1;
   const dom=Array(N).fill(ALL);
   for(const i of givens)dom[i]=1<<pz.sol[i];
   const NB=range(N).map(i=>nbrs(n,i));
@@ -368,7 +352,7 @@ function solveHuddle(pz,clueSet,givens){
       if(!ok)return{solved:false,broken:true};
       cells.forEach((i,t)=>{if(dom[i]!==seen[t]){dom[i]=seen[t];changed=true}});
     }
-    if(groups)for(let k=0;k<C;k++){ // one connected group per color
+    for(let k=0;k<C;k++){ // one connected group per color
       const fixedK=range(N).filter(i=>dom[i]===1<<k);if(!fixedK.length)continue;
       const can=i=>(dom[i]>>k&1)===1;
       const reach=flood(n,fixedK[0],can);
@@ -383,11 +367,11 @@ function solveHuddle(pz,clueSet,givens){
   }
   return{solved:dom.every(d=>popc(d)===1),rounds};
 }
-function genHuddle(level,groups){
+function genHuddle(level){
   const {n,counts}=HUDDLE_LEVELS[level],N=n*n;
   for(let t=0;t<80;t++){
-    const sol=groups?huddleGroups(n,counts):huddleScatter(n,counts);if(!sol)continue;
-    const pz={n,counts,groups,sol,num:range(N).map(i=>sameCount(n,sol,i))};
+    const sol=huddleGroups(n,counts);if(!sol)continue;
+    const pz={n,counts,sol,num:range(N).map(i=>sameCount(n,sol,i))};
     let clues=range(N),givens=[];
     const order=shuffle(range(N));let gi=0;
     while(!solveHuddle(pz,clues,givens).solved&&gi<N)givens.push(order[gi++]);
@@ -399,6 +383,26 @@ function genHuddle(level,groups){
     return{...pz,clues,givens,rounds:r.rounds};
   }
   return null;
+}
+const DIE=30,HOOK=52,TRAY=9,DROP=60;
+/* Each subtree keeps a contour: how far it reaches left and right on every row (one row = one DROP). Two siblings only
+   need to clear each other on rows they both occupy, so lopsided mobiles nest together and grow down instead of out. */
+const GAPX=14;
+function mobLayout(node){
+  if(node.pan){node.W=node.cap*(DIE+6)+16;node.ext=[[node.W/2,node.W/2],[node.W/2,node.W/2]];node.L=node.R=node.W/2;node.H=HOOK+TRAY;return}
+  const {l,r}=node;mobLayout(l);mobLayout(r);
+  const lo=l.pan?0:1,ro=r.pan?0:1,rows=Math.max(l.ext.length+lo,r.ext.length+ro,1);
+  let a=40;
+  for(let k=0;k<rows;k++){const le=l.ext[k-lo],re=r.ext[k-ro];if(le&&re)a=Math.max(a,(le[1]+re[0]+GAPX)/2)}
+  node.a=a;node.ext=[];
+  for(let k=0;k<rows;k++){
+    let L=k===0?a+4:-Infinity,R=L;const le=l.ext[k-lo],re=r.ext[k-ro];
+    if(le){L=Math.max(L,a+le[0]);R=Math.max(R,le[1]-a)}
+    if(re){L=Math.max(L,re[0]-a);R=Math.max(R,a+re[1])}
+    node.ext.push([L,R]);
+  }
+  node.L=Math.max(...node.ext.map(e=>e[0]));node.R=Math.max(...node.ext.map(e=>e[1]));
+  node.H=Math.max(l.pan?l.H:DROP+l.H,r.pan?r.H:DROP+r.H)+14;
 }
 // GEN-END
 
@@ -476,14 +480,6 @@ function dieSVG(v,x,y,s,locked,extra=''){
 }
 const easeBack=x=>{const c1=1.6,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
 const S={p:null,level:'easy',items:[],sel:-1,hover:-1,won:false,ang:new Map(),vel:new Map(),drop:new Map(),pulse:new Map(),bal:new Set(),raf:0,timer:makeTimer($('sc-time'))};
-const DIE=30,HOOK=52,TRAY=9,DROP=52;
-function mobLayout(node){
-  if(node.pan){node.W=node.cap*(DIE+6)+16;node.L=node.R=node.W/2;node.H=HOOK+TRAY;return}
-  mobLayout(node.l);mobLayout(node.r);
-  node.a=Math.max(40,(node.l.R+node.r.L+16)/2);
-  node.L=node.a+node.l.L;node.R=node.a+node.r.R;
-  node.H=DROP+Math.max(node.l.H,node.r.H)+22;
-}
 function newScales(){
   let p=null;while(!p)p=genMobile(S.level);
   Object.assign(S,{p,sel:-1,hover:-1,won:false,ang:new Map(),vel:new Map(),drop:new Map(),pulse:new Map(),bal:new Set()});
@@ -505,7 +501,7 @@ function subtree(node){
   const l=subtree(node.l),r=subtree(node.r);return{dots:l.dots+r.dots,full:l.full&&r.full,l,r};
 }
 function bars(){const out=[];(function walk(n){if(!n.pan){out.push(n);walk(n.l);walk(n.r)}})(S.p.root);return out}
-function targetAngle(node){const s=subtree(node);return Math.max(-0.26,Math.min(0.26,(s.r.dots-s.l.dots)*0.045))}
+function targetAngle(node){const s=subtree(node),m=Math.min(0.26,12/node.a);return Math.max(-m,Math.min(m,(s.r.dots-s.l.dots)*0.045))} // cap the swing so nested rows never collide
 function drawMob(node,x,y,out,now){
   if(node.pan){
     const W=node.W,rim=y+HOOK,d=inPan(node.id),open=d.length<node.cap;
@@ -668,20 +664,21 @@ helpInit('sc');
 
 /* ================= Huddle UI ================= */
 const GLYPH=['●','▲','■'],CNAME=['Gold','Jade','Grape'];
-const H={p:null,level:'easy',groups:store('sh-groups')!=='0',sym:store('sh-sym')==='1',g:[],paint:0,won:false,just:-1,timer:makeTimer($('hd-time'))};
-function syncHuddleControls(){
-  segSet($('hd-mode'),H.groups?$('hm-g'):$('hm-c'));
-  $('hd-sym').setAttribute('aria-checked',H.sym);
-  $('hd-group-rule').hidden=!H.groups;
-}
+const H={p:null,level:'easy',sym:store('sh-sym')==='1',g:[],cells:[],paint:0,won:false,just:-1,timer:makeTimer($('hd-time'))};
 function newHuddle(){
-  syncHuddleControls();
-  let p=null;while(!p)p=genHuddle(H.level,H.groups);
-  H.p=p;H.g=Array(p.n*p.n).fill(-1);H.won=false;H.just=-1;
+  $('hd-sym').setAttribute('aria-checked',H.sym);
+  let p=null;while(!p)p=genHuddle(H.level);
+  H.p=p;H.g=Array(p.n*p.n).fill(-1);H.won=false;H.just=-1;stroke=null;
   for(const i of p.givens)H.g[i]=p.sol[i];
   if(H.p.counts[H.paint]==null)H.paint=0;
   $('hd-win').hidden=true;hideToast('hd-toast');
-  $('hd-grid').classList.remove('won');
+  const grid=$('hd-grid');grid.classList.remove('won');
+  grid.style.gridTemplateColumns=`repeat(${p.n},minmax(0,1fr))`;grid.innerHTML='';H.cells=[];
+  for(let i=0;i<p.n*p.n;i++){ // cells are built once so a finger can keep sliding across them
+    const b=document.createElement('button');b.id='hc'+i;b.dataset.i=i;
+    b.onclick=e=>{if(e.detail===0){startStroke(i);endStroke()}}; // keyboard activation; pointer input is handled below
+    grid.appendChild(b);H.cells.push(b);
+  }
   renderHuddle();H.timer.start();
 }
 function clueState(i){
@@ -692,19 +689,15 @@ function clueState(i){
   return unknown===0?'met':'';
 }
 function renderHuddle(){
-  const p=H.p,n=p.n,grid=$('hd-grid'),clue=new Set(p.clues),giv=new Set(p.givens);
-  grid.style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`;
-  grid.innerHTML='';
-  for(let i=0;i<n*n;i++){
-    const b=document.createElement('button'),k=H.g[i];
-    b.className='hc'+(k>=0?' k'+k:'')+(giv.has(i)?' given':'')+(i===H.just?' just':'');b.id='hc'+i;
+  const p=H.p,n=p.n,clue=new Set(p.clues),giv=new Set(p.givens);
+  H.cells.forEach((b,i)=>{
+    const k=H.g[i];
+    b.className='hc'+(k>=0?' k'+k:'')+(giv.has(i)?' given':'')+(i===H.just?' just':'');
     let html=k>=0&&H.sym?`<span class="gl">${GLYPH[k]}</span>`:'';
     if(clue.has(i))html+=`<span class="num ${clueState(i)}">${p.num[i]}</span>`;
     b.innerHTML=html;
     b.setAttribute('aria-label',`Row ${(i/n|0)+1}, column ${i%n+1}: ${k>=0?CNAME[k]:'empty'}${clue.has(i)?', clue '+p.num[i]:''}${giv.has(i)?', fixed':''}`);
-    b.onclick=()=>tapCell(i);
-    grid.appendChild(b);
-  }
+  });
   H.just=-1;
   const pal=$('hd-pal');pal.innerHTML='';
   p.counts.forEach((c,k)=>{
@@ -724,34 +717,68 @@ function connectedOk(){
   const p=H.p;
   return p.counts.every((c,k)=>{const cells=range(p.n*p.n).filter(i=>H.g[i]===k);return !cells.length||flood(p.n,cells[0],i=>H.g[i]===k).size===cells.length});
 }
-function tapCell(i){
-  if(H.won)return;
-  if(H.p.givens.includes(i)){toast('hd-toast','That square is fixed');return}
-  if(H.paint<0||H.g[i]===H.paint){if(H.g[i]<0)return;H.g[i]=-1}
+
+/* Paint by pressing and sliding. A press on a square already in the active color starts an erasing stroke instead. */
+let stroke=null;
+function startStroke(i){
+  if(H.won||stroke)return;
+  stroke={mode:null,changed:false,warned:false,lastCell:i,x:null,y:null};
+  strokeCell(i,true);
+}
+function strokeCell(i,first){
+  const p=H.p;
+  if(p.givens.includes(i)){if(first)toast('hd-toast','That square is fixed');return}
+  if(!stroke.mode)stroke.mode=H.paint<0||H.g[i]===H.paint?'erase':'paint'; // set by the first square that can change
+  if(stroke.mode==='erase'){if(H.g[i]<0)return;H.g[i]=-1}
   else{
-    const left=H.p.counts[H.paint]-H.g.filter(x=>x===H.paint).length;
-    if(left<=0){toast('hd-toast',`No ${CNAME[H.paint].toLowerCase()} left`,true);buzz([10,40,10]);return}
+    if(H.g[i]===H.paint)return;
+    const left=p.counts[H.paint]-H.g.filter(x=>x===H.paint).length;
+    if(left<=0){if(!stroke.warned){toast('hd-toast',`No ${CNAME[H.paint].toLowerCase()} left`,true);buzz([10,40,10])}stroke.warned=true;return}
     H.g[i]=H.paint;
   }
-  H.just=i;buzz(8);renderHuddle();
-  const p=H.p,full=H.g.every(x=>x>=0);
-  const cluesOk=p.clues.every(c=>clueState(c)==='met'),conn=!p.groups||connectedOk();
-  if(full&&cluesOk&&conn){
+  stroke.changed=true;stroke.lastCell=i;H.just=i;buzz(4);renderHuddle();
+}
+function endStroke(){
+  if(!stroke)return;
+  const s=stroke;stroke=null;
+  if(!s.changed)return;
+  const p=H.p,i=s.lastCell,full=H.g.every(x=>x>=0);
+  const cluesOk=p.clues.every(c=>clueState(c)==='met');
+  if(full&&cluesOk&&connectedOk()){
     H.won=true;H.timer.stop();buzz([15,60,25]);
     const n=p.n,r0=i/n|0,c0=i%n;
-    document.querySelectorAll('#hd-grid .hc').forEach((el,j)=>{el.classList.remove('just');el.style.animationDelay=`${(Math.abs((j/n|0)-r0)+Math.abs(j%n-c0))*55}ms`});
+    H.cells.forEach((el,j)=>{el.classList.remove('just');el.style.animationDelay=`${(Math.abs((j/n|0)-r0)+Math.abs(j%n-c0))*55}ms`});
     $('hd-grid').classList.add('won');
-    const t=fmt(H.timer.secs()),mode=H.groups?'Groups':'Classic';
-    setTimeout(()=>showWin('hd-win','Huddled up',`${mode} ${n}×${n} · ${t}`,`🟨 Huddle ${mode} ${n}×${n} · ${t}`,newHuddle),reduceMotion?0:500);
+    const t=fmt(H.timer.secs());
+    setTimeout(()=>showWin('hd-win','Huddled up',`${n}×${n} · ${t}`,`🟨 Huddle ${n}×${n} · ${t}`,newHuddle),reduceMotion?0:500);
   }else if(full&&!cluesOk)toast('hd-toast','A number is off',true);
   else if(full)toast('hd-toast','A color is split in two',true);
   else hideToast('hd-toast');
 }
+function cellAt(x,y){const el=document.elementFromPoint(x,y),c=el&&el.closest&&el.closest('.hc');return c&&$('hd-grid').contains(c)?+c.dataset.i:-1}
+$('hd-grid').addEventListener('pointerdown',e=>{
+  if(e.button>0)return;
+  const i=cellAt(e.clientX,e.clientY);if(i<0)return;
+  e.preventDefault();
+  startStroke(i);
+  if(stroke){stroke.x=e.clientX;stroke.y=e.clientY}
+});
+addEventListener('pointermove',e=>{
+  if(!stroke)return;
+  // walk the straight line from the last point so a quick swipe doesn't skip squares
+  const size=H.cells[0].getBoundingClientRect().width,dx=e.clientX-stroke.x,dy=e.clientY-stroke.y;
+  const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/(size/3)));
+  for(let t=1;t<=steps;t++){const i=cellAt(stroke.x+dx*t/steps,stroke.y+dy*t/steps);if(i>=0&&i!==stroke.lastCell)strokeCell(i,false)}
+  stroke.x=e.clientX;stroke.y=e.clientY;
+});
+addEventListener('pointerup',endStroke);
+addEventListener('pointercancel',endStroke);
+$('hd-grid').addEventListener('contextmenu',e=>e.preventDefault());
+
 $('hd-new').onclick=newHuddle;
 $('hd-clear').onclick=()=>{if(H.won)return;H.g=H.g.map((x,i)=>H.p.givens.includes(i)?x:-1);hideToast('hd-toast');renderHuddle()};
 for(const b of $('hd-diff').querySelectorAll('button'))b.onclick=()=>{H.level=b.dataset.l;segSet($('hd-diff'),b);newHuddle()};
-for(const b of $('hd-mode').querySelectorAll('button'))b.onclick=()=>{H.groups=b.dataset.g==='1';store('sh-groups',H.groups?'1':'0');newHuddle()};
-$('hd-sym').onclick=()=>{H.sym=!H.sym;store('sh-sym',H.sym?'1':'0');syncHuddleControls();renderHuddle()};
+$('hd-sym').onclick=()=>{H.sym=!H.sym;store('sh-sym',H.sym?'1':'0');$('hd-sym').setAttribute('aria-checked',H.sym);renderHuddle()};
 helpInit('hd');
 
 showTab(store('sh-tab')==='huddle'?'huddle':'scales');
